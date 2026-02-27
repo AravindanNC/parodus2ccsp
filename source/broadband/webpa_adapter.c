@@ -14,7 +14,7 @@
 #include <webcfg_generic.h>
 #endif
 // Helper to parse W3C traceparent header (version-00)
-static int parse_traceparent(const char* traceparent, char* trace_id, char* span_id, char* trace_flags) {
+/* static int parse_traceparent(const char* traceparent, char* trace_id, char* span_id, char* trace_flags) {
         // traceparent: "00-<trace-id>-<span-id>-<flags>"
 	    WalInfo("[OTEL] P1.1\n");
         if (!traceparent) {
@@ -37,7 +37,7 @@ static int parse_traceparent(const char* traceparent, char* trace_id, char* span
         strncpy(trace_flags, traceparent + 53, 2); trace_flags[2] = '\0';
 	    WalInfo("[OTEL] P1.7\n");
         return 1;
-}
+}*/
 /*----------------------------------------------------------------------------*/
 /*                                   Macros                                   */
 /*----------------------------------------------------------------------------*/
@@ -102,9 +102,12 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 
 			    char trace_id[33] = {0}, span_id[17] = {0}, trace_flags[3] = {0};
 			    WalInfo("[OTEL] P1\n");
-                int have_parent = parse_traceparent(req_headers->headers[0], trace_id, span_id, trace_flags);
+                //int have_parent = parse_traceparent(req_headers->headers[0], trace_id, span_id, trace_flags);
+			    strncpy(trace_id, "699db1f5000000001aebfedfd8cb255c", 32); trace_id[32] = '\0';
+			    strncpy(span_id, "0b77973043cac21a", 16); span_id[16] = '\0';
+			    strncpy(trace_flags, "00", 2); trace_flags[2] = '\0';
 			    WalInfo("[OTEL] P2\n");
-			    if (have_parent)
+			    if (1)
 				{
 					WalInfo("[OTEL] P2.1\n");
 					WalInfo("[OTEL] Trace ID : %s, Span ID : %s, Trace Flags : %s\n", trace_id, span_id, trace_flags);
