@@ -16,13 +16,20 @@
 // Helper to parse W3C traceparent header (version-00)
 static int parse_traceparent(const char* traceparent, char* trace_id, char* span_id, char* trace_flags) {
         // traceparent: "00-<trace-id>-<span-id>-<flags>"
+	    WalInfo("[OTEL] P1.1\n");
         if (!traceparent) return 0;
+	    WalInfo("[OTEL] P1.2\n");
         if (strlen(traceparent) < 55) return 0;
+	    WalInfo("[OTEL] P1.3\n");
         // version (2) + dash (1) + trace-id (32) + dash (1) + span-id (16) + dash (1) + flags (2) = 55
         if (traceparent[2] != '-' || traceparent[35] != '-' || traceparent[52] != '-') return 0;
+	    WalInfo("[OTEL] P1.4\n");
         strncpy(trace_id, traceparent + 3, 32); trace_id[32] = '\0';
+	    WalInfo("[OTEL] P1.5\n");
         strncpy(span_id, traceparent + 36, 16); span_id[16] = '\0';
+	    WalInfo("[OTEL] P1.6\n");
         strncpy(trace_flags, traceparent + 53, 2); trace_flags[2] = '\0';
+	    WalInfo("[OTEL] P1.7\n");
         return 1;
 }
 /*----------------------------------------------------------------------------*/
@@ -88,9 +95,12 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                 WalInfo("Response:> type = %d\n", resObj->reqType);
 
 			    char trace_id[33] = {0}, span_id[17] = {0}, trace_flags[3] = {0};
+			    WalInfo("[OTEL] P1\n");
                 int have_parent = parse_traceparent(req_headers->headers[0], trace_id, span_id, trace_flags);
+			    WalInfo("[OTEL] P2\n");
 			    if (have_parent)
 				{
+					WalInfo("[OTEL] P2.1\n");
 					WalInfo("[OTEL] Trace ID : %s, Span ID : %s, Trace Flags : %s\n", trace_id, span_id, trace_flags);
 					WalInfo("Request:> param[0].name = %s\n",i,reqObj->u.setReq->param[0].name);
 					FILE *fp = fopen("/tmp/parentID", "w");
@@ -99,13 +109,17 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                        fclose(fp);
                        WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
                     }
+					WalInfo("[OTEL] P2.2\n");
 					rdk_otlp_store_trace_context(trace_id, span_id, trace_flags);
+					WalInfo("[OTEL] P2.3\n");
 					rdk_otlp_start_child_span(reqObj->u.setReq->param[i].name, "set");
+					WalInfo("[OTEL] P2.4\n");
 				}
 			    else
 				{
 					WalInfo("[OTEL] No Parent found\n");
 				}
+			    WalInfo("[OTEL] P3\n");
 			
                 switch( reqObj->reqType ) 
                 {
