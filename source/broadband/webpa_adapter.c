@@ -88,7 +88,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                 WalInfo("Response:> type = %d\n", resObj->reqType);
 
 			    char trace_id[33] = {0}, span_id[17] = {0}, trace_flags[3] = {0};
-                int have_parent = parse_traceparent(req_headers->headers[0], char* trace_id, char* span_id, char* trace_flags)
+                int have_parent = parse_traceparent(req_headers->headers[0], trace_id, span_id, trace_flags);
 			    if (have_parent)
 				{
 					WalInfo("[OTEL] Trace ID : %s, Span ID : %s, Trace Flags : %s\n", trace_id, span_id, trace_flags);
