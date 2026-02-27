@@ -122,6 +122,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 					WalInfo("[OTEL] P2.3\n");
 					rdk_otlp_start_child_span(reqObj->u.setReq->param[i].name, "set");
 					WalInfo("[OTEL] P2.4\n");
+					rdk_otlp_finish_child_span();
 				}
 			    else
 				{
