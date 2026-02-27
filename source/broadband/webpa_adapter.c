@@ -173,13 +173,6 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 				if(req_headers != NULL && req_headers->headers[0] != NULL && req_headers->headers[1] != NULL) {
                                         setTraceContext(req_headers->headers);
 				}
-				else
-				{
-					    
-						req_headers->headers[0] = strdup("traceparent: 00-foo-bar-05");
-    					req_headers->headers[1] = strdup("tracestate: congo=00k056ccc0tu34d56");
-					    setTraceContext(req_headers->headers);
-				}
                                 WalInfo("After setTraceContext in WEBPA GET request\n");
                                 
                                 if(error != 1)
