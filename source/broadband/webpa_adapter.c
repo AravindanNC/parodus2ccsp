@@ -100,12 +100,11 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                 resObj->reqType = reqObj->reqType;
                 WalInfo("Response:> type = %d\n", resObj->reqType);
 
-			    char trace_id[33] = {0}, span_id[17] = {0}, trace_flags[3] = {0};
+			    char trace_id[33] = "699db1f5000000001aebfedfd8cb255c";
+			    char span_id[17] = "0b77973043cac21a";
+			    char trace_flags[3] = "00";
 			    WalInfo("[OTEL] P1\n");
                 //int have_parent = parse_traceparent(req_headers->headers[0], trace_id, span_id, trace_flags);
-			    strncpy(trace_id, "699db1f5000000001aebfedfd8cb255c", 32); trace_id[32] = '\0';
-			    strncpy(span_id, "0b77973043cac21a", 16); span_id[16] = '\0';
-			    strncpy(trace_flags, "00", 2); trace_flags[2] = '\0';
 			    WalInfo("[OTEL] P2\n");
 			    if (1)
 				{
