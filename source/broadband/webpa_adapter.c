@@ -18,7 +18,7 @@ static int parse_traceparent(const char* traceparent, char* trace_id, char* span
         // traceparent: "00-<trace-id>-<span-id>-<flags>"
 	    WalInfo("[OTEL] P1.1\n");
         if (!traceparent) {
-			00-699db1f5000000001aebfedfd8cb255c-0b77973043cac21a-00
+			// sample 00-699db1f5000000001aebfedfd8cb255c-0b77973043cac21a-00
 			strncpy(trace_id, "699db1f5000000001aebfedfd8cb255c", 32); trace_id[32] = '\0';
 			strncpy(span_id, "0b77973043cac21a", 16); span_id[16] = '\0';
 			strncpy(trace_flags, "00", 2); trace_flags[2] = '\0';
