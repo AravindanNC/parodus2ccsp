@@ -118,7 +118,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                        WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
                     }
 					WalInfo("[OTEL] P2.2\n");
-					rdk_otlp_store_trace_context(trace_id, span_id, trace_flags);
+					rdk_otlp_store_trace_context(reqObj->u.setReq->param[i].name, trace_id, span_id, trace_flags);
 					WalInfo("[OTEL] P2.3\n");
 					rdk_otlp_start_child_span(reqObj->u.setReq->param[i].name, "set");
 					WalInfo("[OTEL] P2.4\n");
