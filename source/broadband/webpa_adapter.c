@@ -599,7 +599,6 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                 wdmp_free_res_struct(resObj);
         }
         WalInfo("************** processRequest *****************\n");
-	rdk_otlp_finish_child_span();
 }
 
 /*----------------------------------------------------------------------------*/
