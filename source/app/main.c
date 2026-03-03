@@ -10,6 +10,7 @@
 #include "webpa_adapter.h"
 #include "libpd.h"
 #include "webpa_rbus.h"
+#include "rdk_otlp_instrumentation.h"
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <curl/curl.h>
 #endif
@@ -33,6 +34,10 @@ static void sig_handler(int sig);
 int main()
 {
         int ret = -1;
+		WalInfo("[OTEL] Initializing OpenTelemetry tracing for webpa\n");
+		rdk_otlp_init("webpa", "1.0.0");
+		WalInfo("[OTEL] OpenTelemetry tracing initialized\n");
+	    rdk_otlp_start_child_span("webpa_ctx", "set");
 
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
@@ -67,6 +72,7 @@ int main()
 	WalInfo("Syncing backend manager with DB....\n");
 	CosaWebpaSyncDB();
 	WalInfo("Webpa backend manager is in sync with DB\n");
+	rdk_otlp_finish_child_span();
 
 	initComponentCaching(ret);
 	// Initialize Apply WiFi Settings handler
