@@ -110,7 +110,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 				{
 					WalInfo("[OTEL] P2.1\n");
 					WalInfo("[OTEL] Trace ID : %s, Span ID : %s, Trace Flags : %s\n", trace_id, span_id, trace_flags);
-					WalInfo("Request:> param[0].name = %s\n",i,reqObj->u.setReq->param[0].name);
+					//WalInfo("Request:> param[0].name = %s\n",i,reqObj->u.setReq->param[0].name);
 					FILE *fp = fopen("/tmp/parentID", "w");
                     if(fp) {
                        fprintf(fp, "%s,%s,%s\n", trace_id, span_id, trace_flags);
@@ -118,9 +118,9 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                        WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
                     }
 					WalInfo("[OTEL] P2.2\n");
-					//rdk_otlp_store_trace_context(reqObj->u.setReq->param[i].name, trace_id, span_id, trace_flags);
+					rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
 					WalInfo("[OTEL] P2.3\n");
-					rdk_otlp_start_child_span(reqObj->u.setReq->param[i].name, "set");
+					rdk_otlp_start_child_span("webpa_ctx", "set");
 					WalInfo("[OTEL] P2.4\n");
 					rdk_otlp_finish_child_span();
 				}
