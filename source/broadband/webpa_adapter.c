@@ -123,6 +123,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 					rdk_otlp_start_child_span("webpa_ctx", "set");
 					WalInfo("[OTEL] P2.4\n");
 					rdk_otlp_finish_child_span();
+					rdk_otlp_force_flush();
 				}
 			    else
 				{
