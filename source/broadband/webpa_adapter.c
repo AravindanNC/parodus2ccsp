@@ -9,6 +9,7 @@
 #include "webpa_notification.h"
 #include "webpa_internal.h"
 #include "webpa_rbus.h"
+#include "rdk_otlp_instrumentation.h"
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <webcfg_generic.h>
 #endif
@@ -42,6 +43,8 @@ extern ANSC_HANDLE bus_handle;
 
 void processRequest(char *reqPayload,char *transactionId, char **resPayload, headers_t *req_headers, headers_t *res_headers)
 {
+	    rdk_otlp_start_child_span("webpa_ctx", "set");
+		WalInfo("[OTEL] Start child span\n");
         req_struct *reqObj = NULL;
         res_struct *resObj = NULL;
         char *payload = NULL;
@@ -550,6 +553,8 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         {
                 wdmp_free_res_struct(resObj);
         }
+	    rdk_otlp_finish_child_span();
+	    WalInfo("[OTEL] Finish child span\n");
         WalPrint("************** processRequest *****************\n");
 }
 
