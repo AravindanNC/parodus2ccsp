@@ -10,7 +10,6 @@
 #include "webpa_adapter.h"
 #include "libpd.h"
 #include "webpa_rbus.h"
-#include "rdk_otlp_instrumentation.h"
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <curl/curl.h>
 #endif
@@ -19,6 +18,7 @@
 #endif
 #include "cosa_webpa_internal.h"
 #include "privilege.h"
+#include "rdk_otlp_instrumentation.h"
 
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
