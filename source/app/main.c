@@ -37,7 +37,8 @@ int main()
 		WalInfo("[OTEL] Initializing OpenTelemetry tracing for webpa\n");
 		rdk_otlp_init("webpa", "1.0.0");
 		WalInfo("[OTEL] OpenTelemetry tracing initialized\n");
-	    rdk_otlp_start_child_span("webpa_ctx", "set");
+	    rdk_otlp_start_distributed_trace("webpa_ctx", "op");
+	    //rdk_otlp_start_child_span("webpa_ctx", "set");
 
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
@@ -72,7 +73,8 @@ int main()
 	WalInfo("Syncing backend manager with DB....\n");
 	CosaWebpaSyncDB();
 	WalInfo("Webpa backend manager is in sync with DB\n");
-	rdk_otlp_finish_child_span();
+	//rdk_otlp_finish_child_span();
+	rdk_otlp_finish_distributed_trace();
 
 	initComponentCaching(ret);
 	// Initialize Apply WiFi Settings handler
