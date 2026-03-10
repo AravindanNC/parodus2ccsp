@@ -59,7 +59,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 		
 		int otlp_test = system("curl -s --connect-timeout 3 --max-time 5 -X POST "
 		                      "-H 'Content-Type: application/json' "
-		                      "-d '{\"resourceSpans\":[]}' "
+		                      "-d '{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"webpa-test\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"webpa-test\",\"version\":\"1.0.0\"},\"spans\":[{\"traceId\":\"1234567890abcdef1234567890abcdef\",\"spanId\":\"1234567890abcdef\",\"name\":\"test-span\",\"kind\":1,\"startTimeUnixNano\":\"1640995200000000000\",\"endTimeUnixNano\":\"1640995201000000000\",\"status\":{\"code\":1}}]}]}]}' "
 		                      "http://localhost:4318/v1/traces > /tmp/webpa_otlp_test.log 2>&1");
 		
 		WalInfo("[OTEL] OTLP connectivity test result: %d\n", otlp_test);
