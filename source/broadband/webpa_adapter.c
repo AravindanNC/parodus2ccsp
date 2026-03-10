@@ -10,8 +10,10 @@
 #include "webpa_internal.h"
 #include "webpa_rbus.h"
 #include "rdk_otlp_instrumentation.h"
+#include <unistd.h> // For usleep
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <webcfg_generic.h>
+#include <pthread.h>
 #endif
 /*----------------------------------------------------------------------------*/
 /*                                   Macros                                   */
@@ -43,8 +45,34 @@ extern ANSC_HANDLE bus_handle;
 
 void processRequest(char *reqPayload,char *transactionId, char **resPayload, headers_t *req_headers, headers_t *res_headers)
 {
+	    WalInfo("[OTEL] Starting span on thread ID: %lu\n", (unsigned long)pthread_self());
 	    rdk_otlp_start_child_span("webpa_ctx", "set");
 		WalInfo("[OTEL] Start child span\n");
+		
+		// Test OTLP connectivity with the exact working curl command
+		WalInfo("[OTEL] === TESTING OTLP CONNECTIVITY ===\n");
+		fflush(stdout);
+		
+		// Test the exact curl command that worked manually
+		WalInfo("[OTEL] Testing POST to /v1/traces with empty payload...\n");
+		fflush(stdout);
+		
+		int otlp_test = system("curl -s --connect-timeout 3 --max-time 5 -X POST "
+		                      "-H 'Content-Type: application/json' "
+		                      "-d '{\"resourceSpans\":[]}' "
+		                      "-w 'HTTP_CODE:%{http_code}' "
+		                      "http://localhost:4318/v1/traces > /tmp/webpa_otlp_test.log 2>&1");
+		
+		WalInfo("[OTEL] OTLP connectivity test result: %d\n", otlp_test);
+		fflush(stdout);
+		
+		// Show the actual response
+		system("echo '[OTEL] Response:' && cat /tmp/webpa_otlp_test.log");
+		fflush(stdout);
+		
+		WalInfo("[OTEL] === OTLP TEST COMPLETE ===\n");
+		fflush(stdout);
+		
         req_struct *reqObj = NULL;
         res_struct *resObj = NULL;
         char *payload = NULL;
@@ -553,6 +581,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         {
                 wdmp_free_res_struct(resObj);
         }
+        WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
 	    rdk_otlp_finish_child_span();
 	    WalInfo("[OTEL] Finish child span\n");
         WalPrint("************** processRequest *****************\n");
