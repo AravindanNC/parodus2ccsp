@@ -10,10 +10,8 @@
 #include "webpa_internal.h"
 #include "webpa_rbus.h"
 #include "rdk_otlp_instrumentation.h"
-#include <unistd.h> // For usleep
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <webcfg_generic.h>
-#include <pthread.h>
 #endif
 /*----------------------------------------------------------------------------*/
 /*                                   Macros                                   */
@@ -45,148 +43,8 @@ extern ANSC_HANDLE bus_handle;
 
 void processRequest(char *reqPayload,char *transactionId, char **resPayload, headers_t *req_headers, headers_t *res_headers)
 {
-	    WalInfo("[OTEL] Starting span on thread ID: %lu\n", (unsigned long)pthread_self());
 	    rdk_otlp_start_child_span("webpa_ctx", "set");
 		WalInfo("[OTEL] Start child span\n");
-		
-		// Check if OTEL endpoint is accessible
-		const char* endpoint = rdk_otlp_get_endpoint();
-		WalInfo("[OTEL] Current endpoint: %s\n", endpoint ? endpoint : "NULL");
-		
-		// === NETWORK STACK CONFLICT DEBUGGING (Using Standard Tools) ===
-		WalInfo("[OTEL] === NETWORK STACK CONFLICT ANALYSIS ===\n");
-		fflush(stdout);
-		
-		// 1. Check current process network bindings using /proc
-		WalInfo("[OTEL] Test 1: Process network state analysis\n");
-		fflush(stdout);
-		
-		char pid_str[32];
-		snprintf(pid_str, sizeof(pid_str), "%d", getpid());
-		
-		// Check process file descriptors for network sockets
-		char proc_fd_cmd[256];
-		snprintf(proc_fd_cmd, sizeof(proc_fd_cmd), "ls -la /proc/%s/fd/ | grep socket > /tmp/webpa_sockets.log 2>&1", pid_str);
-		int proc_fd_result = system(proc_fd_cmd);
-		WalInfo("[OTEL] Process socket FDs: %d\n", proc_fd_result);
-		fflush(stdout);
-		
-		// Check network connections before wrapper operations
-		int netstat_before = system("netstat -tuln > /tmp/netstat_before.log 2>&1");
-		WalInfo("[OTEL] Network state before wrapper: %d\n", netstat_before);
-		fflush(stdout);
-		
-		// 2. Test baseline HTTP connectivity using simple tools
-		WalInfo("[OTEL] Test 2: Baseline HTTP connectivity\n");
-		fflush(stdout);
-		if (endpoint) {
-			// Test with wget if available, fallback to basic connectivity test
-			char http_test_cmd[512];
-			snprintf(http_test_cmd, sizeof(http_test_cmd), 
-				"echo 'GET /v1/health HTTP/1.0\r\nHost: localhost:4318\r\n\r\n' | nc localhost 4318 > /tmp/baseline_http.log 2>&1 || "
-				"wget --timeout=3 --tries=1 -O /tmp/baseline_wget.log '%s/v1/health' 2>&1", endpoint);
-			int http_test = system(http_test_cmd);
-			WalInfo("[OTEL] Baseline HTTP test: %d\n", http_test);
-			fflush(stdout);
-		}
-		
-		// 3. Check for port conflicts and interface usage
-		WalInfo("[OTEL] Test 3: Port conflict analysis\n");
-		fflush(stdout);
-		
-		// Check if WebPA's port 6666 and OTEL port 4318 are in use
-		int port_check = system("netstat -tuln | grep -E ':6666|:4318' > /tmp/port_conflicts.log 2>&1");
-		WalInfo("[OTEL] Port conflict check: %d\n", port_check);
-		fflush(stdout);
-		
-		// Check localhost interface status
-		int localhost_check = system("cat /proc/net/dev | grep lo > /tmp/localhost_interface.log 2>&1");
-		WalInfo("[OTEL] Localhost interface: %d\n", localhost_check);
-		fflush(stdout);
-		
-		// 4. Monitor wrapper network behavior using proc
-		WalInfo("[OTEL] Test 4: Wrapper network monitoring\n");
-		fflush(stdout);
-		
-		// Start simple tcpdump if available
-		int tcpdump_start = system("timeout 10 tcpdump -i any -c 20 'port 4318' > /tmp/wrapper_network.log 2>&1 &");
-		WalInfo("[OTEL] Network monitoring started: %d\n", tcpdump_start);
-		fflush(stdout);
-		
-		usleep(500000); // 500ms for monitoring to start
-		
-		// Force flush with network monitoring
-		WalInfo("[OTEL] Test 5: Force flush network analysis\n");
-		fflush(stdout);
-		
-		// Check network connections during flush
-		rdk_otlp_force_flush();
-		WalInfo("[OTEL] Called rdk_otlp_force_flush with monitoring\n");
-		fflush(stdout);
-		
-		// Give time for network operations
-		usleep(2000000); // 2 seconds
-		
-		// 6. Post-wrapper network state analysis
-		WalInfo("[OTEL] Test 6: Post-wrapper network state\n");
-		fflush(stdout);
-		
-		// Check network connections after wrapper operations
-		int netstat_after = system("netstat -tuln > /tmp/netstat_after.log 2>&1");
-		WalInfo("[OTEL] Network state after wrapper: %d\n", netstat_after);
-		fflush(stdout);
-		
-		// Stop monitoring using standard process tools
-		int stop_tcpdump = system("ps aux | grep tcpdump | grep -v grep | awk '{print $2}' | head -1 | xargs kill 2>/dev/null");
-		WalInfo("[OTEL] Stopped network monitoring: %d\n", stop_tcpdump);
-		fflush(stdout);
-		
-		// 7. Compare network states and analyze conflicts
-		WalInfo("[OTEL] Test 7: Network conflict analysis\n");
-		fflush(stdout);
-		
-		// Compare before/after network states
-		int compare_netstat = system("diff /tmp/netstat_before.log /tmp/netstat_after.log > /tmp/network_diff.log 2>&1");
-		WalInfo("[OTEL] Network state comparison: %d (0=no change)\n", compare_netstat);
-		fflush(stdout);
-		
-		// Check if any packets were captured
-		int packet_analysis = system("wc -l /tmp/wrapper_network.log > /tmp/packet_count.log 2>&1");
-		WalInfo("[OTEL] Packet capture analysis: %d\n", packet_analysis);
-		fflush(stdout);
-		
-		// 8. Test HTTP after wrapper operations
-		WalInfo("[OTEL] Test 8: Post-wrapper HTTP connectivity\n");
-		fflush(stdout);
-		if (endpoint) {
-			char post_http_cmd[512];
-			snprintf(post_http_cmd, sizeof(post_http_cmd), 
-				"echo 'GET /v1/health HTTP/1.0\r\nHost: localhost:4318\r\n\r\n' | nc localhost 4318 > /tmp/post_wrapper_http.log 2>&1 || "
-				"wget --timeout=3 --tries=1 -O /tmp/post_wrapper_wget.log '%s/v1/health' 2>&1", endpoint);
-			int post_http = system(post_http_cmd);
-			WalInfo("[OTEL] Post-wrapper HTTP test: %d\n", post_http);
-			fflush(stdout);
-		}
-		
-		// 9. Interface binding analysis using /proc
-		WalInfo("[OTEL] Test 9: Interface binding analysis\n");
-		fflush(stdout);
-		
-		// Check which interfaces are bound by this process
-		char proc_net_cmd[256];
-		snprintf(proc_net_cmd, sizeof(proc_net_cmd), "cat /proc/%s/net/tcp > /tmp/process_tcp.log 2>&1", pid_str);
-		int proc_net = system(proc_net_cmd);
-		WalInfo("[OTEL] Process TCP bindings: %d\n", proc_net);
-		fflush(stdout);
-		
-		// Check for localhost conflicts specifically
-		int localhost_conflict = system("cat /proc/net/tcp | grep '0100007F' > /tmp/localhost_bindings.log 2>&1");
-		WalInfo("[OTEL] Localhost binding conflicts: %d\n", localhost_conflict);
-		fflush(stdout);
-		
-		WalInfo("[OTEL] === NETWORK STACK ANALYSIS COMPLETE ===\n");
-		fflush(stdout);
-		
         req_struct *reqObj = NULL;
         res_struct *resObj = NULL;
         char *payload = NULL;
@@ -695,7 +553,6 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         {
                 wdmp_free_res_struct(resObj);
         }
-        WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
 	    rdk_otlp_finish_child_span();
 	    WalInfo("[OTEL] Finish child span\n");
         WalPrint("************** processRequest *****************\n");
