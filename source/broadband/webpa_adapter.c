@@ -13,6 +13,7 @@
 #include <unistd.h> // For usleep
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <webcfg_generic.h>
+#include <pthread.h>
 #endif
 /*----------------------------------------------------------------------------*/
 /*                                   Macros                                   */
@@ -44,6 +45,7 @@ extern ANSC_HANDLE bus_handle;
 
 void processRequest(char *reqPayload,char *transactionId, char **resPayload, headers_t *req_headers, headers_t *res_headers)
 {
+	    WalInfo("[OTEL] Starting span on thread ID: %lu\n", (unsigned long)pthread_self());
 	    rdk_otlp_start_child_span("webpa_ctx", "set");
 		WalInfo("[OTEL] Start child span\n");
 		
@@ -693,6 +695,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         {
                 wdmp_free_res_struct(resObj);
         }
+        WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
 	    rdk_otlp_finish_child_span();
 	    WalInfo("[OTEL] Finish child span\n");
         WalPrint("************** processRequest *****************\n");
