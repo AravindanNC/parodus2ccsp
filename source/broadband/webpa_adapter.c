@@ -60,7 +60,6 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 		int otlp_test = system("curl -s --connect-timeout 3 --max-time 5 -X POST "
 		                      "-H 'Content-Type: application/json' "
 		                      "-d '{\"resourceSpans\":[]}' "
-		                      "-w 'HTTP_CODE:%{http_code}' "
 		                      "http://localhost:4318/v1/traces > /tmp/webpa_otlp_test.log 2>&1");
 		
 		WalInfo("[OTEL] OTLP connectivity test result: %d\n", otlp_test);
