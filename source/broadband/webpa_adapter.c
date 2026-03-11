@@ -72,11 +72,11 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 			
 			// Test connectivity to wrapper's actual endpoint
 			if (wrapper_endpoint) {
-			    char test_cmd[512];
+			    char test_cmd[1024];
 			    snprintf(test_cmd, sizeof(test_cmd), 
 			            "curl -s --connect-timeout 3 --max-time 5 -X POST "
 			            "-H 'Content-Type: application/json' "
-			            "-d '{\"resourceSpans\":[]}' "
+			            "-d '{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"webpa-test\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"webpa-test\",\"version\":\"1.0.0\"},\"spans\":[{\"traceId\":\"1234567890abcdef1234567890abcdef\",\"spanId\":\"1234567890abcdef\",\"name\":\"test-span\",\"kind\":1,\"startTimeUnixNano\":\"1640995200000000000\",\"endTimeUnixNano\":\"1640995201000000000\",\"status\":{\"code\":1}}]}]}]}' "
 			            "%s/v1/traces > /tmp/webpa_wrapper_endpoint_test.log 2>&1; echo $?", 
 			            wrapper_endpoint);
 			    
