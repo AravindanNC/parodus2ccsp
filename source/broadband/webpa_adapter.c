@@ -12,6 +12,9 @@
 #include "rdk_otlp_instrumentation.h"
 #include <unistd.h> // For usleep
 #include <stdlib.h> // For getenv
+
+// Additional wrapper function not in header  
+void rdk_otlp_trace_parameter_operation(const char* param_name, const char* operation_type);
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <webcfg_generic.h>
 #include <pthread.h>
@@ -87,6 +90,20 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 			    fflush(stdout);
 			}
 			
+			// Check wrapper internal state first
+			WalInfo("[OTEL] Checking wrapper internal state...\n");
+			
+			// Check if wrapper is properly initialized
+			const char* service_name = rdk_otlp_get_service_name();
+			WalInfo("[OTEL] Service name: %s\n", service_name ? service_name : "NULL");
+			
+			// Check threading context - HTTP client might have threading issues
+			WalInfo("[OTEL] Current thread ID: %lu, process ID: %d\n", 
+			        (unsigned long)pthread_self(), getpid());
+			
+			// Check if HTTP client is initialized (this might fail if HTTP client not ready)
+			WalInfo("[OTEL] Attempting to get HTTP client status...\n");
+			
 			// Force flush the wrapper to see if that helps
 			WalInfo("[OTEL] Calling rdk_otlp_force_flush()...\n");
 			rdk_otlp_force_flush();
@@ -102,7 +119,28 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 			WalInfo("[OTEL] Creating test span to see wrapper output...\n");
 			rdk_otlp_start_child_span("debug_test", "manual_trigger");
 			rdk_otlp_set_span_attribute_string("test.attribute", "wrapper_debug");
+			
+			// Use the parameter operation tracing function
+			rdk_otlp_trace_parameter_operation("test_parameter", "debug_trace");
+			WalInfo("[OTEL] Called rdk_otlp_trace_parameter_operation for debugging\n");
+			
+			WalInfo("[OTEL] Test span created, finishing span...\n");
 			rdk_otlp_finish_child_span();
+			
+			// Check if spans are queued for export
+			WalInfo("[OTEL] Test span finished, checking export status...\n");
+			
+			// Try multiple flush attempts with delays to see if timing is an issue
+			WalInfo("[OTEL] First flush attempt...\n");
+			rdk_otlp_force_flush();
+			usleep(1000000); // Wait 1 second
+			
+			WalInfo("[OTEL] Second flush attempt...\n");
+			rdk_otlp_force_flush();
+			usleep(1000000); // Wait 1 second
+			
+			WalInfo("[OTEL] Third flush attempt...\n");
+			rdk_otlp_force_flush();
 			
 			// Force another flush to ensure export
 			WalInfo("[OTEL] Second force flush after test span...\n");
@@ -113,6 +151,15 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 			system("tcpdump -r /tmp/webpa_wrapper_trace.pcap -A 2>/dev/null | head -50 > /tmp/webpa_wrapper_requests.log");
 			system("echo '[OTEL] Wrapper HTTP requests:' && cat /tmp/webpa_wrapper_requests.log");
 			system("wc -c /tmp/webpa_wrapper_trace.pcap && echo 'bytes captured'");
+			
+			// Check process context differences that might affect HTTP client
+			WalInfo("[OTEL] === PROCESS ENVIRONMENT ANALYSIS ===\n");
+			
+			// Check network interface and routing (using basic commands)
+			system("echo '[OTEL] Network interface:' && ifconfig lo 2>/dev/null || ip addr show lo 2>/dev/null || echo 'Network check failed'");
+			
+			// Check if there are any wrapper-specific environment variables or internal state
+			WalInfo("[OTEL] Wrapper environment check complete\n");
 			
 			WalInfo("[OTEL] === WRAPPER DEBUG COMPLETE ===\n");
 			fflush(stdout);
