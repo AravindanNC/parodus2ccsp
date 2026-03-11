@@ -94,12 +94,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 			WalInfo("[OTEL] Checking wrapper internal state...\n");
 			
 			// Check if wrapper is properly initialized
-			const char* service_name = rdk_otlp_get_service_name();
-			WalInfo("[OTEL] Service name: %s\n", service_name ? service_name : "NULL");
-			
-			// Check threading context - HTTP client might have threading issues
-			WalInfo("[OTEL] Current thread ID: %lu, process ID: %d\n", 
-			        (unsigned long)pthread_self(), getpid());
+		WalInfo("[OTEL] WebPA adapter initialized for OpenTelemetry tracing\n");
 			
 			// Check if HTTP client is initialized (this might fail if HTTP client not ready)
 			WalInfo("[OTEL] Attempting to get HTTP client status...\n");
