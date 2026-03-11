@@ -11,6 +11,7 @@
 #include "webpa_rbus.h"
 #include "rdk_otlp_instrumentation.h"
 #include <unistd.h> // For usleep
+#include <stdlib.h> // For getenv
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <webcfg_generic.h>
 #include <pthread.h>
@@ -50,26 +51,66 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 		WalInfo("[OTEL] Start child span\n");
 		
 		// Test OTLP connectivity with the exact working curl command
-		WalInfo("[OTEL] === TESTING OTLP CONNECTIVITY ===\n");
+WalInfo("[OTEL] === DEBUGGING WRAPPER ENDPOINT CONFIGURATION ===\n");
 		fflush(stdout);
 		
-		// Test the exact curl command that worked manually
-		WalInfo("[OTEL] Testing POST to /v1/traces with empty payload...\n");
+		// Check what endpoint the wrapper is actually using
+		const char* wrapper_endpoint = rdk_otlp_get_endpoint();
+		WalInfo("[OTEL] Wrapper endpoint: %s\n", wrapper_endpoint ? wrapper_endpoint : "NULL");
 		fflush(stdout);
 		
-		int otlp_test = system("curl -s --connect-timeout 3 --max-time 5 -X POST "
-		                      "-H 'Content-Type: application/json' "
-		                      "-d '{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"webpa-test\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"webpa-test\",\"version\":\"1.0.0\"},\"spans\":[{\"traceId\":\"1234567890abcdef1234567890abcdef\",\"spanId\":\"1234567890abcdef\",\"name\":\"test-span\",\"kind\":1,\"startTimeUnixNano\":\"1640995200000000000\",\"endTimeUnixNano\":\"1640995201000000000\",\"status\":{\"code\":1}}]}]}]}' "
-		                      "http://localhost:4318/v1/traces > /tmp/webpa_otlp_test.log 2>&1");
-		
-		WalInfo("[OTEL] OTLP connectivity test result: %d\n", otlp_test);
+		// Check OTEL environment variables
+		const char* otel_endpoint = getenv("OTEL_EXPORTER_OTLP_ENDPOINT");
+		const char* container_env = getenv("RUNNING_IN_CONTAINER");
+		WalInfo("[OTEL] OTEL_EXPORTER_OTLP_ENDPOINT: %s\n", otel_endpoint ? otel_endpoint : "NOT SET");
+		WalInfo("[OTEL] RUNNING_IN_CONTAINER: %s\n", container_env ? container_env : "NOT SET");
 		fflush(stdout);
 		
-		// Show the actual response
-		system("echo '[OTEL] Response:' && cat /tmp/webpa_otlp_test.log");
+		// Test connectivity to wrapper's actual endpoint
+		if (wrapper_endpoint) {
+		    char test_cmd[512];
+		    snprintf(test_cmd, sizeof(test_cmd), 
+		            "curl -s --connect-timeout 3 --max-time 5 -X POST "
+		            "-H 'Content-Type: application/json' "
+		            "-d '{\"resourceSpans\":[]}' "
+		            "%s/v1/traces > /tmp/webpa_wrapper_endpoint_test.log 2>&1; echo $?", 
+		            wrapper_endpoint);
+		    
+		    WalInfo("[OTEL] Testing wrapper endpoint: %s\n", wrapper_endpoint);
+		    int endpoint_test = system(test_cmd);
+		    WalInfo("[OTEL] Wrapper endpoint test result: %d\n", endpoint_test);
+		    system("echo '[OTEL] Wrapper endpoint response:' && cat /tmp/webpa_wrapper_endpoint_test.log");
+		    fflush(stdout);
+		}
+		
+		// Force flush the wrapper to see if that helps
+		WalInfo("[OTEL] Calling rdk_otlp_force_flush()...\n");
+		rdk_otlp_force_flush();
+		WalInfo("[OTEL] Force flush complete\n");
 		fflush(stdout);
 		
-		WalInfo("[OTEL] === OTLP TEST COMPLETE ===\n");
+		// Start packet capture to see what wrapper actually sends
+		WalInfo("[OTEL] Starting tcpdump to capture wrapper requests...\n");
+		system("timeout 5 tcpdump -i lo -w /tmp/webpa_wrapper_trace.pcap 'port 4318' &");
+		usleep(500000); // Wait 0.5 seconds for tcpdump to start
+		
+		// Create a test span to trigger wrapper export
+		WalInfo("[OTEL] Creating test span to see wrapper output...\n");
+		rdk_otlp_start_child_span("debug_test", "manual_trigger");
+		rdk_otlp_set_span_attribute_string("test.attribute", "wrapper_debug");
+		rdk_otlp_finish_child_span();
+		
+		// Force another flush to ensure export
+		WalInfo("[OTEL] Second force flush after test span...\n");
+		rdk_otlp_force_flush();
+		usleep(3000000); // Wait 3 seconds for timeout to kill tcpdump and any delayed exports
+		
+		WalInfo("[OTEL] Analyzing captured packets...\n");
+		system("tcpdump -r /tmp/webpa_wrapper_trace.pcap -A 2>/dev/null | head -50 > /tmp/webpa_wrapper_requests.log");
+		system("echo '[OTEL] Wrapper HTTP requests:' && cat /tmp/webpa_wrapper_requests.log");
+		system("wc -c /tmp/webpa_wrapper_trace.pcap && echo 'bytes captured'");
+		
+		WalInfo("[OTEL] === WRAPPER DEBUG COMPLETE ===\n");
 		fflush(stdout);
 		
         req_struct *reqObj = NULL;
