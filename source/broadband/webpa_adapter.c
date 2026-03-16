@@ -190,7 +190,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                 resObj->reqType = reqObj->reqType;
                 WalPrint("Response:> type = %d\n", resObj->reqType);
 
-			    WalPrint("[OTEL] Request:> param[%d].name = %s\n",i,reqObj->u.setReq->param[i].name);
+			    WalPrint("[OTEL] Request:> param[%d].name = %s\n",i,reqObj->u.setReq->param[0].name);
 			    if (strcasestr(reqObj->u.setReq->param[0].name, "speedtest") != NULL) 
 				{
 					char trace_id[33] = "699db1f5000000001aebfedfd8cb255c";
