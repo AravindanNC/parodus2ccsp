@@ -49,11 +49,9 @@ extern ANSC_HANDLE bus_handle;
 
 void processRequest(char *reqPayload,char *transactionId, char **resPayload, headers_t *req_headers, headers_t *res_headers)
 {
-	    static int otel_debug_done = 0; // Only debug once
+	    static int otel_debug_done = 1; // Zero to enable debug once
 	    
 	    WalInfo("[OTEL] Starting span on thread ID: %lu\n", (unsigned long)pthread_self());
-	    rdk_otlp_start_child_span("webpa_ctx", "set");
-		WalInfo("[OTEL] Start child span\n");
 		
 		// Run OTEL debugging only on first request
 		if (!otel_debug_done) {
@@ -191,7 +189,24 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                 
                 resObj->reqType = reqObj->reqType;
                 WalPrint("Response:> type = %d\n", resObj->reqType);
-                
+
+			    WalPrint("[OTEL] Request:> param[%d].name = %s\n",i,reqObj->u.setReq->param[i].name);
+			    if (strcasestr(reqObj->u.setReq->param[0].name, "speedtest") != NULL) 
+				{
+					char trace_id[33] = "699db1f5000000001aebfedfd8cb255c";
+					char span_id[17] = "0b77973043cac21a";
+					char trace_flags[3] = "00";
+					FILE *fp = fopen("/tmp/parentID", "w");
+        			if(fp) {
+        				fprintf(fp, "%s,%s,%s\n", trace_id, span_id, trace_flags);
+        				fclose(fp);
+        				WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
+        			}
+	    			rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
+	    			rdk_otlp_start_child_span("webpa_ctx", "set");
+					WalInfo("[OTEL] Start child span\n");
+				}
+
                 switch( reqObj->reqType ) 
                 {
                 
@@ -668,9 +683,12 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         {
                 wdmp_free_res_struct(resObj);
         }
-        WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
-	    rdk_otlp_finish_child_span();
-	    WalInfo("[OTEL] Finish child span\n");
+	    if (strcasestr(reqObj->u.setReq->param[0].name, "speedtest") != NULL)
+		{
+        	WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
+	    	rdk_otlp_finish_child_span();
+	    	WalInfo("[OTEL] Finish child span\n");
+		}
         WalPrint("************** processRequest *****************\n");
 }
 
