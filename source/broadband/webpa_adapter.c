@@ -73,14 +73,14 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 
 	    char trace_id[33] = "699db1f5000000001aebfedfd8cb255c";
 		char span_id[17] = "0b77973043cac21a";
-		char trace_flags[3] = "00";
+		char trace_flags[3] = "01";
 		FILE *fp = fopen("/tmp/parentID", "w");
         if(fp) {
         	fprintf(fp, "%s,%s,%s\n", trace_id, span_id, trace_flags);
         	fclose(fp);
         	WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
         }
-	    //rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
+	    rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
 	    rdk_otlp_start_child_span("webpa_ctx", "set");
 		WalInfo("[OTEL] Start child span\n");
         
