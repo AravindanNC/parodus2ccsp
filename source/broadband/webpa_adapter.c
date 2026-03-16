@@ -179,6 +179,19 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         wdmp_parse_request(reqPayload,&reqObj);
         (req_headers != NULL && req_headers->headers[0] != NULL && req_headers->headers[1] != NULL) ? WalInfo("transactionId : %s, traceParent : %s, traceState : %s in request\n", transactionId, req_headers->headers[0], req_headers->headers[1]) : WalInfo("transactionId in request: %s\n", transactionId);
         OnboardLog("%s\n",transactionId);
+
+	    char trace_id[33] = "699db1f5000000001aebfedfd8cb255c";
+		char span_id[17] = "0b77973043cac21a";
+		char trace_flags[3] = "00";
+		FILE *fp = fopen("/tmp/parentID", "w");
+        if(fp) {
+        	fprintf(fp, "%s,%s,%s\n", trace_id, span_id, trace_flags);
+        	fclose(fp);
+        	WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
+        }
+	    rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
+	    rdk_otlp_start_child_span("webpa_ctx", "set");
+		WalInfo("[OTEL] Start child span\n");
         
         if(reqObj != NULL)
         {
@@ -189,24 +202,6 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                 
                 resObj->reqType = reqObj->reqType;
                 WalPrint("Response:> type = %d\n", resObj->reqType);
-
-			    WalPrint("[OTEL] Request:> param[%d].name = %s\n",i,reqObj->u.setReq->param[0].name);
-			    if (strcasestr(reqObj->u.setReq->param[0].name, "speedtest") != NULL) 
-				{
-					char trace_id[33] = "699db1f5000000001aebfedfd8cb255c";
-					char span_id[17] = "0b77973043cac21a";
-					char trace_flags[3] = "00";
-					FILE *fp = fopen("/tmp/parentID", "w");
-        			if(fp) {
-        				fprintf(fp, "%s,%s,%s\n", trace_id, span_id, trace_flags);
-        				fclose(fp);
-        				WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
-        			}
-	    			rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
-	    			rdk_otlp_start_child_span("webpa_ctx", "set");
-					WalInfo("[OTEL] Start child span\n");
-				}
-
                 switch( reqObj->reqType ) 
                 {
                 
@@ -683,12 +678,9 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         {
                 wdmp_free_res_struct(resObj);
         }
-	    if (strcasestr(reqObj->u.setReq->param[0].name, "speedtest") != NULL)
-		{
-        	WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
-	    	rdk_otlp_finish_child_span();
-	    	WalInfo("[OTEL] Finish child span\n");
-		}
+       	WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
+    	rdk_otlp_finish_child_span();
+    	WalInfo("[OTEL] Finish child span\n");
         WalPrint("************** processRequest *****************\n");
 }
 
