@@ -49,115 +49,6 @@ extern ANSC_HANDLE bus_handle;
 
 void processRequest(char *reqPayload,char *transactionId, char **resPayload, headers_t *req_headers, headers_t *res_headers)
 {
-	    static int otel_debug_done = 1; // Zero to enable debug once
-	    
-	    WalInfo("[OTEL] Starting span on thread ID: %lu\n", (unsigned long)pthread_self());
-		
-		// Run OTEL debugging only on first request
-		if (!otel_debug_done) {
-		    otel_debug_done = 1;
-		    WalInfo("[OTEL] === DEBUGGING WRAPPER ENDPOINT CONFIGURATION (FIRST REQUEST ONLY) ===\n");
-			fflush(stdout);
-			
-			// Check what endpoint the wrapper is actually using
-			const char* wrapper_endpoint = rdk_otlp_get_endpoint();
-			WalInfo("[OTEL] Wrapper endpoint: %s\n", wrapper_endpoint ? wrapper_endpoint : "NULL");
-			fflush(stdout);
-			
-			// Check OTEL environment variables
-			const char* otel_endpoint = getenv("OTEL_EXPORTER_OTLP_ENDPOINT");
-			const char* container_env = getenv("RUNNING_IN_CONTAINER");
-			WalInfo("[OTEL] OTEL_EXPORTER_OTLP_ENDPOINT: %s\n", otel_endpoint ? otel_endpoint : "NOT SET");
-			WalInfo("[OTEL] RUNNING_IN_CONTAINER: %s\n", container_env ? container_env : "NOT SET");
-			fflush(stdout);
-			
-			// Test connectivity to wrapper's actual endpoint
-			if (wrapper_endpoint) {
-			    char test_cmd[1024];
-			    snprintf(test_cmd, sizeof(test_cmd), 
-			            "curl -s --connect-timeout 3 --max-time 5 -X POST "
-			            "-H 'Content-Type: application/json' "
-			            "-d '{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"webpa-test\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"webpa-test\",\"version\":\"1.0.0\"},\"spans\":[{\"traceId\":\"1234567890abcdef1234567890abcdef\",\"spanId\":\"1234567890abcdef\",\"name\":\"test-span\",\"kind\":1,\"startTimeUnixNano\":\"1640995200000000000\",\"endTimeUnixNano\":\"1640995201000000000\",\"status\":{\"code\":1}}]}]}]}' "
-			            "%s/v1/traces > /tmp/webpa_wrapper_endpoint_test.log 2>&1; echo $?", 
-			            wrapper_endpoint);
-			    
-			    WalInfo("[OTEL] Testing wrapper endpoint: %s\n", wrapper_endpoint);
-			    int endpoint_test = system(test_cmd);
-			    WalInfo("[OTEL] Wrapper endpoint test result: %d\n", endpoint_test);
-			    system("echo '[OTEL] Wrapper endpoint response:' && cat /tmp/webpa_wrapper_endpoint_test.log");
-			    fflush(stdout);
-			}
-			
-			// Check wrapper internal state first
-			WalInfo("[OTEL] Checking wrapper internal state...\n");
-			
-			// Check if wrapper is properly initialized
-		WalInfo("[OTEL] WebPA adapter initialized for OpenTelemetry tracing\n");
-			
-			// Check if HTTP client is initialized (this might fail if HTTP client not ready)
-			WalInfo("[OTEL] Attempting to get HTTP client status...\n");
-			
-			// Force flush the wrapper to see if that helps
-			WalInfo("[OTEL] Calling rdk_otlp_force_flush()...\n");
-			rdk_otlp_force_flush();
-			WalInfo("[OTEL] Force flush complete\n");
-			fflush(stdout);
-			
-			// Start packet capture to see what wrapper actually sends
-			WalInfo("[OTEL] Starting tcpdump to capture wrapper requests...\n");
-			system("timeout 5 tcpdump -i lo -w /tmp/webpa_wrapper_trace.pcap 'port 4318' &");
-			usleep(500000); // Wait 0.5 seconds for tcpdump to start
-			
-			// Create a test span to trigger wrapper export
-			WalInfo("[OTEL] Creating test span to see wrapper output...\n");
-			rdk_otlp_start_child_span("debug_test", "manual_trigger");
-			rdk_otlp_set_span_attribute_string("test.attribute", "wrapper_debug");
-			
-			// Use the parameter operation tracing function
-			rdk_otlp_trace_parameter_operation("test_parameter", "debug_trace");
-			WalInfo("[OTEL] Called rdk_otlp_trace_parameter_operation for debugging\n");
-			
-			WalInfo("[OTEL] Test span created, finishing span...\n");
-			rdk_otlp_finish_child_span();
-			
-			// Check if spans are queued for export
-			WalInfo("[OTEL] Test span finished, checking export status...\n");
-			
-			// Try multiple flush attempts with delays to see if timing is an issue
-			WalInfo("[OTEL] First flush attempt...\n");
-			rdk_otlp_force_flush();
-			usleep(1000000); // Wait 1 second
-			
-			WalInfo("[OTEL] Second flush attempt...\n");
-			rdk_otlp_force_flush();
-			usleep(1000000); // Wait 1 second
-			
-			WalInfo("[OTEL] Third flush attempt...\n");
-			rdk_otlp_force_flush();
-			
-			// Force another flush to ensure export
-			WalInfo("[OTEL] Second force flush after test span...\n");
-			rdk_otlp_force_flush();
-			usleep(3000000); // Wait 3 seconds for timeout to kill tcpdump and any delayed exports
-			
-			WalInfo("[OTEL] Analyzing captured packets...\n");
-			system("tcpdump -r /tmp/webpa_wrapper_trace.pcap -A 2>/dev/null | head -50 > /tmp/webpa_wrapper_requests.log");
-			system("echo '[OTEL] Wrapper HTTP requests:' && cat /tmp/webpa_wrapper_requests.log");
-			system("wc -c /tmp/webpa_wrapper_trace.pcap && echo 'bytes captured'");
-			
-			// Check process context differences that might affect HTTP client
-			WalInfo("[OTEL] === PROCESS ENVIRONMENT ANALYSIS ===\n");
-			
-			// Check network interface and routing (using basic commands)
-			system("echo '[OTEL] Network interface:' && ifconfig lo 2>/dev/null || ip addr show lo 2>/dev/null || echo 'Network check failed'");
-			
-			// Check if there are any wrapper-specific environment variables or internal state
-			WalInfo("[OTEL] Wrapper environment check complete\n");
-			
-			WalInfo("[OTEL] === WRAPPER DEBUG COMPLETE ===\n");
-			fflush(stdout);
-		}
-		
         req_struct *reqObj = NULL;
         res_struct *resObj = NULL;
         char *payload = NULL;
@@ -189,7 +80,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         	fclose(fp);
         	WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
         }
-	    rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
+	    //rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
 	    rdk_otlp_start_child_span("webpa_ctx", "set");
 		WalInfo("[OTEL] Start child span\n");
         
