@@ -571,6 +571,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         }
        	WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
     	rdk_otlp_finish_child_span();
+	    rdk_otlp_force_flush();
     	WalInfo("[OTEL] Finish child span\n");
         WalPrint("************** processRequest *****************\n");
 }
