@@ -15,6 +15,32 @@
 
 // Additional wrapper function not in header  
 void rdk_otlp_trace_parameter_operation(const char* param_name, const char* operation_type);
+
+// Helper function to check if request contains speedtest parameters for SET operations only
+static int contains_speedtest_parameter(req_struct *reqObj) {
+    if (reqObj == NULL) return 0;
+    
+    int i;
+    switch(reqObj->reqType) {
+        case SET:
+        case SET_ATTRIBUTES:
+        case TEST_AND_SET:
+            if (reqObj->u.setReq && reqObj->u.setReq->param) {
+                int paramCount = (reqObj->reqType == TEST_AND_SET) ? 
+                    (int)reqObj->u.testSetReq->paramCnt : (int)reqObj->u.setReq->paramCnt;
+                for (i = 0; i < paramCount; i++) {
+                    if (reqObj->u.setReq->param[i].name && 
+                        strcasestr(reqObj->u.setReq->param[i].name, "speedtest") != NULL) {
+                        return 1;
+                    }
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    return 0;
+}
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <webcfg_generic.h>
 #include <pthread.h>
@@ -71,18 +97,23 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         (req_headers != NULL && req_headers->headers[0] != NULL && req_headers->headers[1] != NULL) ? WalInfo("transactionId : %s, traceParent : %s, traceState : %s in request\n", transactionId, req_headers->headers[0], req_headers->headers[1]) : WalInfo("transactionId in request: %s\n", transactionId);
         OnboardLog("%s\n",transactionId);
 
-	    char trace_id[33] = "699db1f5000000001aebfedfd8cb255c";
-		char span_id[17] = "0b77973043cac21a";
-		char trace_flags[3] = "01";
-		FILE *fp = fopen("/tmp/parentID", "w");
-        if(fp) {
-        	fprintf(fp, "%s,%s,%s\n", trace_id, span_id, trace_flags);
-        	fclose(fp);
-        	WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
+        // Check if this request contains speedtest parameters
+        int is_speedtest_request = contains_speedtest_parameter(reqObj);
+        
+        if (is_speedtest_request) {
+	        char trace_id[33] = "699db1f5000000001aebfedfd8cb255c";
+		    char span_id[17] = "0b77973043cac21a";
+		    char trace_flags[3] = "01";
+		    FILE *fp = fopen("/tmp/parentID", "w");
+            if(fp) {
+            	fprintf(fp, "%s,%s,%s\n", trace_id, span_id, trace_flags);
+            	fclose(fp);
+            	WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
+            }
+	        rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
+	        rdk_otlp_start_child_span("webpa_ctx", "set");
+		    WalInfo("[OTEL] Start child span for speedtest request\n");
         }
-	    rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
-	    rdk_otlp_start_child_span("webpa_ctx", "set");
-		WalInfo("[OTEL] Start child span\n");
         
         if(reqObj != NULL)
         {
@@ -569,10 +600,14 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         {
                 wdmp_free_res_struct(resObj);
         }
-       	WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
-    	rdk_otlp_finish_child_span();
-	    rdk_otlp_force_flush();
-    	WalInfo("[OTEL] Finish child span\n");
+        
+        // Only finish span if we started one for speedtest requests
+        if (is_speedtest_request) {
+        	WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
+    	    rdk_otlp_finish_child_span();
+	        rdk_otlp_force_flush();
+    	    WalInfo("[OTEL] Finish child span for speedtest request\n");
+        }
         WalPrint("************** processRequest *****************\n");
 }
 
