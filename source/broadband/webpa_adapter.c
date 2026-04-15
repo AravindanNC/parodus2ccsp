@@ -110,9 +110,10 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
             	fclose(fp);
             	WalInfo("[OTEL] Wrote parent trace context to /tmp/parentID for speedtest\n");
             }
-	        rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
-	        rdk_otlp_start_child_span("webpa_ctx", "set");
-		    WalInfo("[OTEL] Start child span for speedtest request\n");
+	        //rdk_otlp_store_trace_context("webpa_ctx", trace_id, span_id, trace_flags);
+	        //rdk_otlp_start_child_span("webpa_ctx", "set");
+			rdk_otlp_start_distributed_trace("webpa_ctx", "set");
+		    WalInfo("[OTEL] Started span for speedtest request\n");
         }
         
         if(reqObj != NULL)
@@ -604,9 +605,10 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
         // Only finish span if we started one for speedtest requests
         if (is_speedtest_request) {
         	WalInfo("[OTEL] Finishing span on thread ID: %lu\n", (unsigned long)pthread_self());
-    	    rdk_otlp_finish_child_span();
+    	    //rdk_otlp_finish_child_span();
+			rdk_otlp_finish_distributed_trace();
 	        rdk_otlp_force_flush();
-    	    WalInfo("[OTEL] Finish child span for speedtest request\n");
+    	    WalInfo("[OTEL] Finish span for speedtest request\n");
         }
         WalPrint("************** processRequest *****************\n");
 }
