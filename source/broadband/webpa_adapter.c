@@ -41,6 +41,32 @@ static int contains_speedtest_parameter(req_struct *reqObj) {
     }
     return 0;
 }
+
+// Helper function to check if request contains RDKRemoteDebugger parameters for SET operations only
+static int contains_remotedebugger_parameter(req_struct *reqObj) {
+    if (reqObj == NULL) return 0;
+
+    int i;
+    switch(reqObj->reqType) {
+        case SET:
+        case SET_ATTRIBUTES:
+        case TEST_AND_SET:
+            if (reqObj->u.setReq && reqObj->u.setReq->param) {
+                int paramCount = (reqObj->reqType == TEST_AND_SET) ?
+                    (int)reqObj->u.testSetReq->paramCnt : (int)reqObj->u.setReq->paramCnt;
+                for (i = 0; i < paramCount; i++) {
+                    if (reqObj->u.setReq->param[i].name &&
+                        strcasestr(reqObj->u.setReq->param[i].name, "RDKRemoteDebugger") != NULL) {
+                        return 1;
+                    }
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    return 0;
+}
 #ifdef FEATURE_SUPPORT_WEBCONFIG
 #include <webcfg_generic.h>
 #include <pthread.h>
@@ -99,6 +125,8 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 
         // Check if this request contains speedtest parameters
         int is_speedtest_request = contains_speedtest_parameter(reqObj);
+        // Check if this request contains remote debugger parameters
+        int is_rrd_request = contains_remotedebugger_parameter(reqObj);
         
         if (is_speedtest_request) {
 	        char trace_id[33] = "699db1f5000000001aebfedfd8cb255c";
@@ -114,6 +142,11 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 	        //rdk_otlp_start_child_span("webpa_ctx", "set");
 			rdk_otlp_start_distributed_trace("webpa_ctx", "set");
 		    WalInfo("[OTEL] Started span for speedtest request\n");
+        }
+
+        if (is_rrd_request) {
+			rdk_otlp_start_distributed_trace("RRD_ctx", "set");
+		    WalInfo("[OTEL] Started distributed trace for RDKRemoteDebugger request\n");
         }
         
         if(reqObj != NULL)
@@ -609,6 +642,14 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 			rdk_otlp_finish_distributed_trace();
 	        rdk_otlp_force_flush();
     	    WalInfo("[OTEL] Finish span for speedtest request\n");
+        }
+
+        // Finish distributed trace for remote debugger requests
+        if (is_rrd_request) {
+        	WalInfo("[OTEL] Finishing distributed trace on thread ID: %lu\n", (unsigned long)pthread_self());
+			rdk_otlp_finish_distributed_trace();
+	        rdk_otlp_force_flush();
+    	    WalInfo("[OTEL] Finished distributed trace for RDKRemoteDebugger request\n");
         }
         WalPrint("************** processRequest *****************\n");
 }
