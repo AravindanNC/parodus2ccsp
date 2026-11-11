@@ -36,6 +36,7 @@ set(COMMON_LIBRARY_DIR ${INSTALL_DIR}/lib/${CMAKE_LIBRARY_ARCHITECTURE})
 option(BUILD_RASPBERRYPI "BUILD_RASPBERRYPI" OFF)
 option(BUILD_EMULATOR "BUILD_EMULATOR" OFF)
 option(BUILD_BANANAPI_R4 "BUILD_BANANAPI_R4" OFF)
+option(BUILD_GENERICARM "BUILD_GENERICARM" OFF)
 
 include_directories(${INCLUDE_DIR}
                     ${INCLUDE_DIR}/cjson
@@ -93,6 +94,10 @@ if (BUILD_BANANAPI_R4)
 add_definitions(-D_PLATFORM_BANANAPI_R4_)
 endif (BUILD_BANANAPI_R4)
 
+if (BUILD_GENERICARM)
+add_definitions(-D_PLATFORM_GENERICARM_)
+endif (BUILD_GENERICARM)
+
 if (FEATURE_SUPPORT_WEBCONFIG)
 add_definitions(-DFEATURE_SUPPORT_WEBCONFIG)
 endif (FEATURE_SUPPORT_WEBCONFIG)
@@ -136,8 +141,8 @@ add_dependencies(libtrower-base64 trower-base64)
 #-------------------------------------------------------------------------------
 ExternalProject_Add(wdmp-c
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/_prefix/wdmp-c
-    GIT_REPOSITORY https://github.com/Comcast/wdmp-c.git
-    GIT_TAG "f9f687b6b4b10c2b72341e792a64334f0a409848"
+    GIT_REPOSITORY https://github.com/xmidt-org/wdmp-c.git
+    GIT_TAG "2ef1179e724ce29cc2b602f9c98fa34f054f7273"
     CMAKE_ARGS += -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}
                   -DBUILD_TESTING=OFF
 )

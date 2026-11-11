@@ -56,8 +56,9 @@ static void connect_parodus()
         int c =2;
         int retval=-1;
         int fd = 0;
-        char *parodus_url = NULL;
-        char *client_url = NULL;
+		/* CID-71358 CID-55326 Resource leak fix */
+        static char *parodus_url = NULL;
+        static char *client_url = NULL;
 
 	    pthread_condattr_init(&attr);
         pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
@@ -66,7 +67,9 @@ static void connect_parodus()
 
         max_retry_sleep = (int) pow(2, backoff_max_time) -1;
         WalInfo("max_retry_sleep is %d\n", max_retry_sleep );
-
+	   /* CID-71358 CID-55326 Resource leak fix */
+		WAL_FREE(parodus_url);
+		WAL_FREE(client_url);	
 	get_parodus_url(&parodus_url, &client_url);
 		
 	if(parodus_url != NULL && client_url != NULL)

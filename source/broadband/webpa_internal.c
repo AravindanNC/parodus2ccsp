@@ -34,7 +34,9 @@ int cachingStatus = 0;
 char *failedCompList[RDKB_TR181_OBJECT_LEVEL1_COUNT] = { '\0' };
 char *failedSubCompList[RDKB_TR181_OBJECT_LEVEL2_COUNT] = { '\0' };
 char *objectList[] ={
+#ifndef NO_WIFI_FEATURE_SUPPORT
 "Device.WiFi.",
+#endif
 "Device.DeviceInfo.",
 "Device.GatewayInfo.",
 "Device.Time.",
@@ -65,15 +67,17 @@ char *objectList[] ={
 #if ! defined(_HUB4_PRODUCT_REQ_) || ! defined(_SCER11BEL_PRODUCT_REQ_)
 #if defined(_COSA_BCM_MIPS_)
 "Device.DPoE.",
-#else
+#elif !defined(PON_GATEWAY)
 "Device.X_CISCO_COM_CableModem.",
 #endif
 #endif
 "Device.X_Comcast_com_ParentalControl.",
 "Device.X_CISCO_COM_Diagnostics.",
 "Device.X_CISCO_COM_MultiLAN.",
+#ifndef NO_WIFI_FEATURE_SUPPORT
 "Device.X_COMCAST_COM_GRE.",
 "Device.X_CISCO_COM_GRE.",
+#endif
 "Device.Hosts.",
 "Device.ManagementServer.",
 "Device.XHosts.",
@@ -106,12 +110,16 @@ char *subObjectList[] =
 "Device.DeviceInfo.MemoryStatus.",
 "Device.DeviceInfo.ProcessStatus.",
 "Device.DeviceInfo.Webpa.",
+#if !defined(PON_GATEWAY) && !defined(MODEM_ONLY_SUPPORT)
 "Device.DeviceInfo.SupportedDataModel.",
+#endif
 "Device.DeviceInfo.X_RDKCENTRAL-COM.",
 "Device.DeviceInfo.X_RDKCENTRAL-COM_xOpsDeviceMgmt.",
+#ifndef NO_WIFI_FEATURE_SUPPORT
 "Device.X_RDKCENTRAL-COM_Report.InterfaceDevicesWifi.",
 "Device.X_RDKCENTRAL-COM_Report.RadioInterfaceStatistics.",
 "Device.X_RDKCENTRAL-COM_Report.NeighboringAP.",
+#endif
 "Device.X_RDKCENTRAL-COM_Report.NetworkDevicesStatus.",
 "Device.X_RDKCENTRAL-COM_Report.NetworkDevicesTraffic.",
 "Device.X_RDKCENTRAL-COM_Webpa.Server.",
@@ -202,15 +210,15 @@ int waitForOperationalReadyCondition()
 	{
 		return EPON_FAILED;
 	}
-#elif !defined(PLATFORM_RASPBERRYPI) && !defined(RDKB_EMU) && !defined(_PLATFORM_BANANAPI_R4_)
+#elif !defined(PLATFORM_RASPBERRYPI) && !defined(RDKB_EMU) && !defined(_PLATFORM_BANANAPI_R4_) && !defined(_PLATFORM_GENERICARM_)
     if(check_ethernet_wan_status() != WDMP_SUCCESS)
 	{
-#if !defined(_SKY_HUB_COMMON_PRODUCT_REQ_)
+#if !defined(_SKY_HUB_COMMON_PRODUCT_REQ_) && !defined(PON_GATEWAY)
 	    if(waitForComponentReady(RDKB_CM_COMPONENT_NAME,RDKB_CM_DBUS_PATH) != CCSP_SUCCESS)
 	    {
 		    return CM_FAILED;
 	    }
-#endif // _SKY_HUB_COMMON_PRODUCT_REQ_
+#endif // _SKY_HUB_COMMON_PRODUCT_REQ_ && PON_GATEWAY
 	}
 #endif
 	if(waitForComponentReady(CCSP_DBUS_PSM,CCSP_DBUS_PATH_PSM) != CCSP_SUCCESS)

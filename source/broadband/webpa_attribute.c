@@ -233,7 +233,7 @@ static int setParamAttributes(param_t *attArr,int paramCount, money_trace_spans 
 	WalPrint("paramName: %s count: %d\n",paramName,count);
 	for(i = 0; i < count; i++)
 	{
-		WalInfo("compName[%d] : %s, dbusPath[%d] : %s\n", i,compName[i],i, dbusPath[i]);
+		WalPrint("compName[%d] : %s, dbusPath[%d] : %s\n", i,compName[i],i, dbusPath[i]);
         if(!strcmp(compName[i],RDKB_WIFI_FULL_COMPONENT_NAME) && applySettingsFlag == TRUE)
         {
             ret = CCSP_ERR_WIFI_BUSY;
