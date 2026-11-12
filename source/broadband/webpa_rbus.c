@@ -55,10 +55,11 @@ rbusError_t setTraceContext(char* traceContext[])
         /* CID-334852 Function address comparison fix */
         if(isRbusInitialized())
         {
-                if(traceContext[0] != NULL && traceContext[1] != NULL) {
-                       if(strlen(traceContext[0]) > 0 && strlen(traceContext[1]) > 0) {
-			    WalInfo("Invoked setTraceContext function with value traceParent - %s, traceState - %s\n", traceContext[0], traceContext[1]);    
-                            ret = rbusHandle_SetTraceContextFromString(rbus_handle, traceContext[0], traceContext[1]);
+                  if(traceContext != NULL && traceContext[0] != NULL) {
+                          if(strlen(traceContext[0]) > 0) {
+                                const char *traceState = traceContext[1] != NULL ? traceContext[1] : "";
+			    WalInfo("Invoked setTraceContext function with value traceParent - %s, traceState - %s\n", traceContext[0], traceState);
+                                ret = rbusHandle_SetTraceContextFromString(rbus_handle, traceContext[0], traceState);
                             if(ret == RBUS_ERROR_SUCCESS) {
                                   WalPrint("SetTraceContext request success\n");
                             }
@@ -85,19 +86,28 @@ rbusError_t getTraceContext(char* traceContext[])
         rbusError_t ret = RBUS_ERROR_BUS_ERROR;
         char traceParent[512] = {'\0'};
         char traceState[512] = {'\0'};
+	if(traceContext == NULL)
+                return RBUS_ERROR_INVALID_INPUT;
 	/* CID-334847 Function address comparison fix */
 	if(isRbusInitialized())
         {
 	      ret =  rbusHandle_GetTraceContextAsString(rbus_handle, traceParent, sizeof(traceParent), traceState, sizeof(traceState));
 	      if( ret == RBUS_ERROR_SUCCESS) {
-		      if(strlen(traceParent) > 0 && strlen(traceState) > 0) {
+		      if(strlen(traceParent) > 0) {
 			      WalPrint("GetTraceContext request success\n");
 		              traceContext[0] = strdup(traceParent);
 	                      traceContext[1] = strdup(traceState);
+			      if(traceContext[0] == NULL || traceContext[1] == NULL) {
+                                      free(traceContext[0]);
+                                      free(traceContext[1]);
+                                      traceContext[0] = NULL;
+                                      traceContext[1] = NULL;
+                                      return RBUS_ERROR_OUT_OF_RESOURCES;
+                              }
 			      WalInfo("traceContext value, traceParent - %s, traceState - %s\n", traceContext[0], traceContext[1]);
 	               }
 		       else {
-			       WalPrint("traceParent & traceState are empty\n");
+                               WalPrint("traceParent is empty\n");
 		       }	       
 	      }
 	      else {
