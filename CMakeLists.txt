@@ -37,6 +37,7 @@ option(BUILD_RASPBERRYPI "BUILD_RASPBERRYPI" OFF)
 option(BUILD_EMULATOR "BUILD_EMULATOR" OFF)
 option(BUILD_BANANAPI_R4 "BUILD_BANANAPI_R4" OFF)
 option(BUILD_GENERICARM "BUILD_GENERICARM" OFF)
+option(TP_ENABLED "Enable WebPA distributed tracing with librdk_otlp" OFF)
 
 include_directories(${INCLUDE_DIR}
                     ${INCLUDE_DIR}/cjson
