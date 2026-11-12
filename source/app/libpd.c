@@ -189,16 +189,32 @@ static void parodus_receive()
 						memset(res_wrp_msg, 0, sizeof(wrp_msg_t));
                         getCurrentTime(startPtr);
 			headers_t *res_headers = NULL;
+#ifdef TP_ENABLED
+			if(wrp_msg->u.req.headers != NULL && wrp_msg->u.req.headers->count > 0) {
+#else
 			if(wrp_msg->u.req.headers != NULL) {
+#endif
 				WalPrint("Allocating memory for response headers\n");
+#ifdef TP_ENABLED
+                        	res_headers = (headers_t *)malloc(sizeof(headers_t) + sizeof(char *) * 2);
+#else
                         	res_headers = (headers_t *)malloc(sizeof(headers_t) + sizeof( char * ) * (wrp_msg->u.req.headers->count));
+#endif
 				if(res_headers != NULL) {
 					WalPrint("Memory allocated successfully for response headers\n");
+#ifdef TP_ENABLED
+					memset(res_headers, 0, sizeof(headers_t) + sizeof(char *) * 2);
+					res_headers->count = 2;
+#else
 					memset(res_headers, 0, (sizeof(headers_t) + sizeof( char * ) * (wrp_msg->u.req.headers->count)));
+#endif
 				}
 				else {
 					/* CID-59824 Resource leak fix */
 					WAL_FREE(res_wrp_msg);
+#ifdef TP_ENABLED
+					wrp_free_struct(wrp_msg);
+#endif
 					WalError("Memory not allocated for response headers\n");
 					return;
 				}	
@@ -208,8 +224,13 @@ static void parodus_receive()
                         }
 			processRequest((char *)wrp_msg->u.req.payload, wrp_msg->u.req.transaction_uuid, ((char **)(&(res_wrp_msg->u.req.payload))), wrp_msg->u.req.headers, res_headers);
 			if(res_headers != NULL && res_headers->headers[0] != NULL && res_headers->headers[1] != NULL) {
-                                if(strlen(res_headers->headers[0]) > 0 && strlen(res_headers->headers[1]) > 0) {
-                                          res_headers->count = wrp_msg->u.req.headers->count;
+#ifdef TP_ENABLED
+								if(strlen(res_headers->headers[0]) > 0) {
+										  res_headers->count = 2;
+#else
+								if(strlen(res_headers->headers[0]) > 0 && strlen(res_headers->headers[1]) > 0) {
+										  res_headers->count = wrp_msg->u.req.headers->count;
+#endif
                                           res_wrp_msg->u.req.headers = res_headers;
 					  clearTraceContext();
 					  WalInfo("The response wrp_msg header fields\n");
@@ -222,12 +243,20 @@ static void parodus_receive()
 								{
 									/* CID-334851 Resource leak fix */
 									WalInfo("Deallocating memory for non processing response headers\n");
+#ifdef TP_ENABLED
+									WAL_FREE(res_headers->headers[0]);
+									WAL_FREE(res_headers->headers[1]);
+#endif
 									WAL_FREE(res_headers);
 								}
                          }
 			 else if(res_headers != NULL)
 			 {
 				 WalInfo("Deallocating memory for non processing response headers\n");
+#ifdef TP_ENABLED
+				 WAL_FREE(res_headers->headers[0]);
+				 WAL_FREE(res_headers->headers[1]);
+#endif
 				 free(res_headers);
 				 res_headers = NULL;
 			 }	
