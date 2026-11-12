@@ -18,6 +18,9 @@
 #endif
 #include "cosa_webpa_internal.h"
 #include "privilege.h"
+#ifdef TP_ENABLED
+#include "rdk_otlp_instrumentation.h"
+#endif
 
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
@@ -63,6 +66,9 @@ int main()
 	        webpaRbusInit(pComponentName);
         }
 	ret = waitForOperationalReadyCondition();
+#ifdef TP_ENABLED
+        rdk_otlp_init("webpa", WEBPA_GIT_VERSION);
+#endif
 	libpd_client_mgr();
 	WalInfo("Syncing backend manager with DB....\n");
 	CosaWebpaSyncDB();
@@ -80,6 +86,9 @@ int main()
 curl_global_cleanup();
 #endif
 	WalInfo("Exiting webpa main thread!!\n");
+#ifdef TP_ENABLED
+        rdk_otlp_shutdown();
+#endif
 	return 1;
 }
 
