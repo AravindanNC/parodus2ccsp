@@ -50,6 +50,33 @@ void test_setTraceContext_success()
     webpaRbus_Uninit();
 }
 
+void test_setTraceContext_without_tracestate()
+{
+    char *traceContext[2] = {
+        "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", NULL
+    };
+    char *receivedContext[2] = {NULL, NULL};
+    webpaRbusInit("componentName");
+    CU_ASSERT_EQUAL(RBUS_ERROR_SUCCESS, setTraceContext(traceContext));
+    CU_ASSERT_EQUAL(RBUS_ERROR_SUCCESS, getTraceContext(receivedContext));
+    CU_ASSERT_PTR_NOT_NULL(receivedContext[0]);
+    CU_ASSERT_PTR_NOT_NULL(receivedContext[1]);
+    if(receivedContext[0] != NULL && receivedContext[1] != NULL)
+    {
+        CU_ASSERT_STRING_EQUAL(receivedContext[0], traceContext[0]);
+        CU_ASSERT_STRING_EQUAL(receivedContext[1], "");
+    }
+    free(receivedContext[0]);
+    free(receivedContext[1]);
+    receivedContext[0] = NULL;
+    receivedContext[1] = NULL;
+    clearTraceContext();
+    CU_ASSERT_EQUAL(RBUS_ERROR_SUCCESS, getTraceContext(receivedContext));
+    CU_ASSERT_PTR_NULL(receivedContext[0]);
+    CU_ASSERT_PTR_NULL(receivedContext[1]);
+    webpaRbus_Uninit();
+}
+
 //traceContext header NULL
 void test_setTraceContext_header_NULL()
 {   
@@ -154,6 +181,7 @@ void add_suites( CU_pSuite *suite )
     CU_add_test( *suite, "test isRbusInitialized_success", test_isRbusInitialized_success);
     CU_add_test( *suite, "test webpaRbusInit_success", test_webpaRbusInit_success);
     CU_add_test( *suite, "test setTraceContext_success", test_setTraceContext_success);
+    CU_add_test( *suite, "test setTraceContext_without_tracestate", test_setTraceContext_without_tracestate);
     CU_add_test( *suite, "test setTraceContext_header_NULL", test_setTraceContext_header_NULL);
     CU_add_test( *suite, "test setTraceContext_header_empty", test_setTraceContext_header_empty);
     CU_add_test( *suite, "test getTraceContext_success", test_getTraceContext_success);
