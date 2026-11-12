@@ -21,6 +21,11 @@ set (WEBPA_COMMON_SOURCES ../source/broadband/webpa_adapter.c ../source/broadban
 set (WEBPA_TABLE_SOURCES ../source/broadband/webpa_replace.c ../source/broadband/webpa_table.c)
 link_directories ( ${LIBRARY_DIR} )
 
+if (TP_ENABLED)
+add_test(NAME test_webpa_trace COMMAND ./test_webpa_trace)
+add_executable(test_webpa_trace test_webpa_trace.c ../source/broadband/webpa_trace.c)
+endif()
+
 #-------------------------------------------------------------------------------
 #   test_libpd
 #-------------------------------------------------------------------------------
