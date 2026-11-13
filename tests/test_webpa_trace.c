@@ -9,7 +9,7 @@
 #include "rdk_otlp_instrumentation.h"
 
 static const char *activeTraceparent;
-static const char *receivedParent;
+static char receivedParent[56];
 static unsigned int starts;
 static unsigned int finishes;
 static bool tracerAvailable = true;
@@ -27,7 +27,7 @@ int access(const char *path, int mode)
 void rdk_otlp_start_child_from_traceparent(const char *traceparent, const char *operation)
 {
     assert(strcmp(operation, "webpa.set") == 0);
-    receivedParent = traceparent;
+    snprintf(receivedParent, sizeof(receivedParent), "%s", traceparent);
     ++starts;
     activeTraceparent = tracerAvailable ? childTraceparent : NULL;
 }
@@ -97,6 +97,26 @@ int main(void)
     assert(!started && starts == 3);
     webpaTraceFinish(started, NULL);
     assert(finishes == 2);
+    tracingEnabled = true;
+    {
+        const char *headerLines[] = {
+            "traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            "TraceParent:\t00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01 \t",
+            " \t00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01 "
+        };
+        unsigned int previousStarts = starts;
+        for(index = 0; index < sizeof(headerLines) / sizeof(headerLines[0]); ++index)
+        {
+            started = webpaTraceStart(headerLines[index], "webpa.set", NULL);
+            assert(started);
+            assert(strcmp(receivedParent, parent) == 0);
+            webpaTraceFinish(started, "0");
+        }
+        assert(starts == previousStarts + 3 && finishes == 5);
+    }
+    assert(!webpaTraceStart("traceparent: invalid", "webpa.set", NULL));
+    assert(!webpaTraceStart("traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01\r\n",
+                            "webpa.set", NULL));
     puts("WebPA trace validation and span lifecycle: PASS");
     return 0;
 }
