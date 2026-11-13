@@ -65,7 +65,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
 	char *requestTraceContext[2] = {NULL, NULL};
 #ifdef TP_ENABLED
         bool traceStarted = false;
-        char outgoingTraceparent[64] = {0};
+        char outgoingTraceparent[80] = {0};
         char traceStatus[32];
 #endif
 
@@ -98,7 +98,7 @@ void processRequest(char *reqPayload,char *transactionId, char **resPayload, hea
                                 traceStarted = webpaTraceStart(requestTraceContext[0], operation, transactionId);
                                 if(traceStarted)
                                 {
-                                        snprintf(outgoingTraceparent, sizeof(outgoingTraceparent), "%s", rdk_otlp_get_current_traceparent());
+                                        snprintf(outgoingTraceparent, sizeof(outgoingTraceparent), "traceparent: %s", rdk_otlp_get_current_traceparent());
                                         requestTraceContext[0] = outgoingTraceparent;
                                         if((reqObj->reqType == SET || reqObj->reqType == SET_ATTRIBUTES) &&
                                            reqObj->u.setReq->paramCnt > 0 && reqObj->u.setReq->param[0].name != NULL)
