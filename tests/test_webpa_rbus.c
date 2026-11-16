@@ -63,8 +63,13 @@ void test_setTraceContext_without_tracestate()
     CU_ASSERT_PTR_NOT_NULL(receivedContext[1]);
     if(receivedContext[0] != NULL && receivedContext[1] != NULL)
     {
+#ifdef TP_ENABLED
+        CU_ASSERT_STRING_EQUAL(receivedContext[0], "traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
+        CU_ASSERT_STRING_EQUAL(receivedContext[1], "tracestate: ");
+#else
         CU_ASSERT_STRING_EQUAL(receivedContext[0], traceContext[0]);
         CU_ASSERT_STRING_EQUAL(receivedContext[1], "");
+#endif
     }
     free(receivedContext[0]);
     free(receivedContext[1]);
@@ -76,6 +81,43 @@ void test_setTraceContext_without_tracestate()
     CU_ASSERT_PTR_NULL(receivedContext[1]);
     webpaRbus_Uninit();
 }
+
+#ifdef TP_ENABLED
+void test_trace_context_device_and_cloud_formats()
+{
+    char *context[2] = {
+        "TraceParent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+        "tracestate: vendor=value"
+    };
+    char *response[2] = {NULL, NULL};
+    char parent[512] = {0};
+    char state[512] = {0};
+    webpaRbusInit("componentName");
+    CU_ASSERT_EQUAL(RBUS_ERROR_SUCCESS, rbus_open(&handle, "trace-observer"));
+    CU_ASSERT_EQUAL(RBUS_ERROR_SUCCESS, setTraceContext(context));
+    CU_ASSERT_EQUAL(RBUS_ERROR_SUCCESS,
+        rbusHandle_GetTraceContextAsString(handle, parent, sizeof(parent), state, sizeof(state)));
+    CU_ASSERT_STRING_EQUAL(parent, "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
+    CU_ASSERT_STRING_EQUAL(state, "vendor=value");
+    CU_ASSERT_EQUAL(RBUS_ERROR_SUCCESS, getTraceContext(response));
+    CU_ASSERT_PTR_NOT_NULL(response[0]);
+    CU_ASSERT_PTR_NOT_NULL(response[1]);
+    if(response[0] != NULL && response[1] != NULL)
+    {
+        CU_ASSERT_STRING_EQUAL(response[0], "traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
+        CU_ASSERT_STRING_EQUAL(response[1], "tracestate: vendor=value");
+    }
+    CU_ASSERT_EQUAL(RBUS_ERROR_SUCCESS,
+        rbusHandle_GetTraceContextAsString(handle, parent, sizeof(parent), state, sizeof(state)));
+    CU_ASSERT_STRING_EQUAL(parent, "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
+    CU_ASSERT_STRING_EQUAL(state, "vendor=value");
+    free(response[0]);
+    free(response[1]);
+    clearTraceContext();
+    rbus_close(handle);
+    webpaRbus_Uninit();
+}
+#endif
 
 //traceContext header NULL
 void test_setTraceContext_header_NULL()
@@ -182,6 +224,9 @@ void add_suites( CU_pSuite *suite )
     CU_add_test( *suite, "test webpaRbusInit_success", test_webpaRbusInit_success);
     CU_add_test( *suite, "test setTraceContext_success", test_setTraceContext_success);
     CU_add_test( *suite, "test setTraceContext_without_tracestate", test_setTraceContext_without_tracestate);
+#ifdef TP_ENABLED
+    CU_add_test( *suite, "test device raw and cloud header formats", test_trace_context_device_and_cloud_formats);
+#endif
     CU_add_test( *suite, "test setTraceContext_header_NULL", test_setTraceContext_header_NULL);
     CU_add_test( *suite, "test setTraceContext_header_empty", test_setTraceContext_header_empty);
     CU_add_test( *suite, "test getTraceContext_success", test_getTraceContext_success);
