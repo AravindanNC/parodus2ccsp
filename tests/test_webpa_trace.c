@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+#include <syscfg/syscfg.h>
 #include "webpa_trace.h"
 #include "rdk_otlp_instrumentation.h"
 
@@ -13,15 +13,20 @@ static char receivedParent[56];
 static unsigned int starts;
 static unsigned int finishes;
 static bool tracerAvailable = true;
-static bool tracingEnabled = true;
+static const char *tracingValue = "true";
+static int syscfgResult = 0;
 static const char *childTraceparent =
     "00-4bf92f3577b34da6a3ce929d0e0e4736-1234567890abcdef-01";
 
-int access(const char *path, int mode)
+int syscfg_get(const char *nameSpace, const char *name, char *value, int size)
 {
-    assert(strcmp(path, "/tmp/rdk_distributed_tracing_enabled") == 0);
-    assert(mode == F_OK);
-    return tracingEnabled ? 0 : -1;
+    assert(nameSpace == NULL);
+    assert(strcmp(name, "DistributedTracingEnabled") == 0);
+    assert(value != NULL && size > 0);
+    if(syscfgResult != 0)
+        return syscfgResult;
+    snprintf(value, (size_t)size, "%s", tracingValue);
+    return 0;
 }
 
 void rdk_otlp_start_child_from_traceparent(const char *traceparent, const char *operation)
@@ -92,12 +97,12 @@ int main(void)
     webpaTraceFinish(started, NULL);
     assert(finishes == 2 && activeTraceparent == NULL);
     tracerAvailable = true;
-    tracingEnabled = false;
+    tracingValue = "false";
     started = webpaTraceStart(parent, "webpa.set", NULL);
     assert(!started && starts == 3);
     webpaTraceFinish(started, NULL);
     assert(finishes == 2);
-    tracingEnabled = true;
+    tracingValue = "true";
     {
         const char *headerLines[] = {
             "traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
@@ -117,6 +122,27 @@ int main(void)
     assert(!webpaTraceStart("traceparent: invalid", "webpa.set", NULL));
     assert(!webpaTraceStart("traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01\r\n",
                             "webpa.set", NULL));
+    {
+        const char *enabledValues[] = {"true", "TRUE", "1"};
+        const char *disabledValues[] = {"false", "0", "", "true-invalid", "10", "yes"};
+        for(index = 0; index < sizeof(enabledValues) / sizeof(enabledValues[0]); ++index)
+        {
+            tracingValue = enabledValues[index];
+            started = webpaTraceStart(parent, "webpa.set", NULL);
+            assert(started);
+            webpaTraceFinish(started, "0");
+        }
+        unsigned int previousStarts = starts;
+        for(index = 0; index < sizeof(disabledValues) / sizeof(disabledValues[0]); ++index)
+        {
+            tracingValue = disabledValues[index];
+            assert(!webpaTraceStart(parent, "webpa.set", NULL));
+        }
+        tracingValue = "true";
+        syscfgResult = -1;
+        assert(!webpaTraceStart(parent, "webpa.set", NULL));
+        assert(starts == previousStarts && activeTraceparent == NULL);
+    }
     puts("WebPA trace validation and span lifecycle: PASS");
     return 0;
 }
