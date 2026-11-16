@@ -20,6 +20,7 @@
 #include "privilege.h"
 #ifdef TP_ENABLED
 #include "rdk_otlp_instrumentation.h"
+#include <syscfg/syscfg.h>
 #endif
 
 /*----------------------------------------------------------------------------*/
@@ -67,6 +68,8 @@ int main()
         }
 	ret = waitForOperationalReadyCondition();
 #ifdef TP_ENABLED
+	if(syscfg_init() != 0)
+	    WalError("WebPA tracing: syscfg initialization failed\n");
         rdk_otlp_init("webpa", WEBPA_GIT_VERSION);
 #endif
 	libpd_client_mgr();
