@@ -5,6 +5,9 @@
 #include <wdmp-c.h>
 #include <cimplog.h>
 #include "webpa_rbus.h"
+#ifdef TP_ENABLED
+#include <strings.h>
+#endif
 
 static rbusHandle_t rbus_handle;
 static bool isRbus = false;
@@ -57,9 +60,20 @@ rbusError_t setTraceContext(char* traceContext[])
         {
                   if(traceContext != NULL && traceContext[0] != NULL) {
                           if(strlen(traceContext[0]) > 0) {
+                                                                const char *traceParent = traceContext[0];
                                 const char *traceState = traceContext[1] != NULL ? traceContext[1] : "";
-			    WalInfo("Invoked setTraceContext function with value traceParent - %s, traceState - %s\n", traceContext[0], traceState);
-                                ret = rbusHandle_SetTraceContextFromString(rbus_handle, traceContext[0], traceState);
+#ifdef TP_ENABLED
+                                                                traceParent += strspn(traceParent, " \t");
+                                                                if(strncasecmp(traceParent, "traceparent:", sizeof("traceparent:") - 1) == 0)
+                                                                        traceParent += sizeof("traceparent:") - 1;
+                                                                traceParent += strspn(traceParent, " \t");
+                                                                traceState += strspn(traceState, " \t");
+                                                                if(strncasecmp(traceState, "tracestate:", sizeof("tracestate:") - 1) == 0)
+                                                                        traceState += sizeof("tracestate:") - 1;
+                                                                traceState += strspn(traceState, " \t");
+#endif
+			    WalInfo("Invoked setTraceContext function with value traceParent - %s, traceState - %s\n", traceParent, traceState);
+                                                                ret = rbusHandle_SetTraceContextFromString(rbus_handle, traceParent, traceState);
                             if(ret == RBUS_ERROR_SUCCESS) {
                                   WalPrint("SetTraceContext request success\n");
                             }
@@ -95,8 +109,19 @@ rbusError_t getTraceContext(char* traceContext[])
 	      if( ret == RBUS_ERROR_SUCCESS) {
 		      if(strlen(traceParent) > 0) {
 			      WalPrint("GetTraceContext request success\n");
+#ifdef TP_ENABLED
+                              char parentHeader[sizeof(traceParent) + sizeof("traceparent: ")];
+                              char stateHeader[sizeof(traceState) + sizeof("tracestate: ")];
+                              snprintf(parentHeader, sizeof(parentHeader), "%s%s",
+                                       strncasecmp(traceParent, "traceparent:", sizeof("traceparent:") - 1) == 0 ? "" : "traceparent: ", traceParent);
+                              snprintf(stateHeader, sizeof(stateHeader), "%s%s",
+                                       strncasecmp(traceState, "tracestate:", sizeof("tracestate:") - 1) == 0 ? "" : "tracestate: ", traceState);
+                              traceContext[0] = strdup(parentHeader);
+                              traceContext[1] = strdup(stateHeader);
+#else
 		              traceContext[0] = strdup(traceParent);
 	                      traceContext[1] = strdup(traceState);
+#endif
 			      if(traceContext[0] == NULL || traceContext[1] == NULL) {
                                       free(traceContext[0]);
                                       free(traceContext[1]);
