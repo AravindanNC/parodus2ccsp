@@ -39,6 +39,9 @@ target_link_libraries (test_libpd gcov -Wl,--no-as-needed )
 #-------------------------------------------------------------------------------
 add_test(NAME test_webpa_rbus COMMAND ${MEMORY_CHECK} ./test_webpa_rbus)
 add_executable(test_webpa_rbus test_webpa_rbus.c ../source/broadband/webpa_rbus.c)
+if (TP_ENABLED)
+set_property(TARGET test_webpa_rbus APPEND PROPERTY COMPILE_DEFINITIONS TP_ENABLED)
+endif()
 target_link_libraries (test_webpa_rbus ${WEBPA_COMMON_LIBS} -llibparodus -lrbus -lcunit)
 target_link_libraries (test_webpa_rbus gcov -Wl,--no-as-needed )
 
