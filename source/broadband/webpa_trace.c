@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <strings.h>
-#include <unistd.h>
+#include <syscfg/syscfg.h>
 #include "webpa_trace.h"
 #include "rdk_otlp_instrumentation.h"
 
@@ -34,6 +34,7 @@ static bool validTraceparent(const char *traceparent)
 bool webpaTraceStart(const char *traceparent, const char *operation, const char *transactionId)
 {
     char normalizedParent[56];
+    char tracingValue[16] = {0};
     size_t length;
 
     if(traceparent == NULL)
@@ -50,8 +51,12 @@ bool webpaTraceStart(const char *traceparent, const char *operation, const char 
     memcpy(normalizedParent, traceparent, length);
     normalizedParent[length] = '\0';
 
-    if(!validTraceparent(normalizedParent) || operation == NULL ||
-       access("/tmp/rdk_distributed_tracing_enabled", F_OK) != 0)
+    if(!validTraceparent(normalizedParent) || operation == NULL)
+        return false;
+    if(syscfg_get(NULL, "DistributedTracingEnabled", tracingValue, sizeof(tracingValue)) != 0)
+        return false;
+    tracingValue[sizeof(tracingValue) - 1] = '\0';
+    if(strcasecmp(tracingValue, "true") != 0 && strcmp(tracingValue, "1") != 0)
         return false;
 
     rdk_otlp_start_child_from_traceparent(normalizedParent, operation);
